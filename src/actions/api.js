@@ -1,0 +1,1 @@
+export const api="https://server-1-6kzj.onrender.com"
