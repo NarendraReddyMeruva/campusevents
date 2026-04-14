@@ -8,8 +8,9 @@ import {
 } from '@chakra-ui/react';
 import { HamburgerIcon, CloseIcon } from '@chakra-ui/icons';
 import axios from 'axios';
-import logo from "../../assets/srkrcodingclublogo.png"
-import {api} from "../../actions/api"
+import logo from "../../assets/srkrlogo.jpeg"
+import { api } from "../../actions/api"
+
 
 const HomePage = () => {
     const { isOpen, onToggle } = useDisclosure();
@@ -20,7 +21,7 @@ const HomePage = () => {
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [registeredEvents, setRegisteredEvents] = useState([]);
-   
+
 
     useEffect(() => {
         const fetchEvents = async () => {
@@ -72,7 +73,7 @@ const HomePage = () => {
                         <HStack spacing={4}>
                             <Image
                                 src={logo}
-                                alt="SRKR Coding Club Logo"
+                                alt="SRKR Logo"
                                 h="70px"
                                 fallbackSrc="https://via.placeholder.com/150x40/000000/FFFFFF?text=SRKR+CC"
                             />
@@ -82,7 +83,7 @@ const HomePage = () => {
                                 color="black"
                                 whiteSpace="nowrap"
                             >
-                                SRKREC Coding Club
+                                SRKR CampusEvents
                             </Text>
                         </HStack>
 
@@ -346,18 +347,19 @@ const HomePage = () => {
                     <SimpleGrid columns={{ base: 1, md: 2 }} spacing={8} alignItems="center">
                         <Box>
                             <Heading as="h2" size="xl" mb={6} color="orange.400">
-                                Our Coding Journey
+                                About SRKR CampusEvents
                             </Heading>
                             <Text mb={4} fontSize="lg">
-                                Founded in 2015, SRKR Coding Club has grown from a small group of programming enthusiasts to a vibrant community of 200+ members.
+                                Started in 2015, SRKR CampusEvents has become the central hub for managing and celebrating all campus activities and technical events at SRKR Engineering College.
                             </Text>
                             <Text mb={4} fontSize="lg">
-                                Our mission is to foster technical skills, encourage innovation, and prepare students for the tech industry through hands-on learning.
+                                Our goal is to bring together students, organizers, and departments through a unified platform that simplifies event discovery, registration, and participation.
                             </Text>
                             <Text fontSize="lg">
-                                We've conducted 50+ workshops, 15 hackathons, and helped 100+ students land tech internships.
+                                Over the years, we've successfully managed 100+ campus events, from workshops and hackathons to cultural fests and seminars — helping students stay engaged and connected.
                             </Text>
                         </Box>
+
                         <Image
                             src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
                             alt="Coding Club Team"
@@ -418,7 +420,7 @@ const HomePage = () => {
                     </Heading>
 
                     <SimpleGrid columns={{ base: 1, md: 2 }} spacing={8}>
-                        {events.map((event) => (
+                        {events.slice(0, 2).map((event) => (
                             <Box
                                 key={event._id}
                                 borderWidth="1px"
@@ -479,9 +481,9 @@ const HomePage = () => {
                 <Container maxW="container.xl">
                     <Flex direction={{ base: "column", md: "row" }} justify="space-between" align="center">
                         <Image
-                            src="/srkr-coding-club-logo.png"
+                            src={logo}
                             alt="SRKR Coding Club Logo"
-                            h="30px"
+                            h="100px"
                             mb={{ base: 4, md: 0 }}
                             fallbackSrc="https://via.placeholder.com/150x30/000000/FFFFFF?text=SRKR+CC"
                         />
@@ -494,7 +496,7 @@ const HomePage = () => {
                     </Flex>
                     <Divider my={4} borderColor="whiteAlpha.200" />
                     <Text textAlign="center" color="gray.500">
-                        © {new Date().getFullYear()} SRKR Coding Club. All rights reserved.
+                        © {new Date().getFullYear()} SRKR CampusEvents. All rights reserved.
                     </Text>
                 </Container>
             </Box>

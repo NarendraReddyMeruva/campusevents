@@ -1,7 +1,7 @@
-import React from 'react';
+
 import { Link } from 'react-router-dom';
-import { Box, Button, Flex, Heading, VStack, Image } from '@chakra-ui/react';
-import logo from "../../assets/srkrcodingclublogo.png"
+import {  Button, Flex, VStack, Image } from '@chakra-ui/react';
+import logo from "../../assets/srkrlogo.jpeg"
 
 export const LandingPage = () => {
   return (
@@ -13,7 +13,7 @@ export const LandingPage = () => {
       p={10}
     >
       <VStack spacing={12}>
-        {/* Coding Club Logo */}
+       
         <Image 
           src={logo} 
           alt="Coding Club Logo"
@@ -21,7 +21,7 @@ export const LandingPage = () => {
           fallbackSrc="https://via.placeholder.com/150/FFFFFF/000000?text=CC"
         />
 
-        {/* Login Buttons */}
+      
         <VStack spacing={4} width="500px">
           <Button
             as={Link}

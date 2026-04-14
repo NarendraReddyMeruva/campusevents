@@ -13,6 +13,7 @@ import UserEventsPage from './pages/user/events/eventsDisplay';
 import UserGalleryPage from './pages/user/gallery/membersDisplay';
 import EventRegister from './pages/user/registration/EventRegister';
 import TicketVerification from './pages/admin/ticket';
+import AboutPage from './pages/user/about/about';
 
 
 
@@ -33,7 +34,9 @@ function App() {
       <Route path='/events/:userId' element={<UserEventsPage/>}/>
       <Route path='/gallery' element={<UserGalleryPage/>}/>
       <Route path='/register/:userId/:eventId' element={<EventRegister/>}/>
-       <Route path='/ticket/verification' element={<TicketVerification/>}/>
+      <Route path='/ticket/verification' element={<TicketVerification/>}/>
+      <Route path='/about' element={<AboutPage/>}/>
+
       
 
     </Routes>

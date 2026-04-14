@@ -1,1 +1,1 @@
-export const api="https://server-1-6kzj.onrender.com"
+export const api="https://ceserver.onrender.com"

@@ -14,7 +14,6 @@ const GalleryPage = () => {
   const [formData, setFormData] = useState({ 
     _id: '',
     name: '',
-    class: '',
     regno: '',
     role: 'member',
     photoBase64: '' 
@@ -59,7 +58,7 @@ const GalleryPage = () => {
   };
 
   const handleAddMember = async () => {
-    if (!formData.name || !formData.class || !formData.regno || !formData.photoBase64) {
+    if (!formData.name || !formData.regno || !formData.photoBase64) {
       toast({
         title: 'Error',
         description: 'All fields except role are required',
@@ -111,7 +110,6 @@ const GalleryPage = () => {
     setFormData({
       _id: member._id,
       name: member.name,
-      class: member.class,
       regno: member.regno,
       role: member.role,
       photoBase64: member.photoBase64
@@ -146,7 +144,6 @@ const GalleryPage = () => {
     setFormData({ 
       _id: '',
       name: '',
-      class: '',
       regno: '',
       role: 'member',
       photoBase64: '' 
@@ -193,7 +190,6 @@ const GalleryPage = () => {
               />
             )}
             <Text fontSize="xl" fontWeight="bold">{member.name}</Text>
-            <Text>Class: {member.class}</Text>
             <Text>Reg No: {member.regno}</Text>
             <Text>Role: {member.role}</Text>
             <Stack direction="row" spacing={2} mt={3}>
@@ -225,11 +221,6 @@ const GalleryPage = () => {
                 placeholder="Full Name" 
                 value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value })} 
-              />
-              <Input 
-                placeholder="Class" 
-                value={formData.class}
-                onChange={e => setFormData({ ...formData, class: e.target.value })} 
               />
               <Input 
                 placeholder="Registration Number" 
