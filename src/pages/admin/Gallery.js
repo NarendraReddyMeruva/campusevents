@@ -2,15 +2,19 @@ import React, { useEffect, useState } from 'react';
 import {
   Box, Button, Image, Input, Stack, Text, VStack, useDisclosure, Modal,
   ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton,
-  useToast, IconButton, SimpleGrid, Select
+  useToast, IconButton, SimpleGrid, Select, Flex, Heading, useColorMode, useColorModeValue
 } from '@chakra-ui/react';
+import { SunIcon, MoonIcon, ArrowBackIcon } from '@chakra-ui/icons';
 import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../actions/api';
+import { useUser } from '../../context/UserContext';
 
 const GalleryPage = () => {
   const [gallery, setGallery] = useState([]);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({ 
     _id: '',
     name: '',
@@ -22,12 +26,30 @@ const GalleryPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const toast = useToast();
 
+  const { colorMode, toggleColorMode } = useColorMode();
+  const { user, galleryCache, setGalleryCache, clearCache } = useUser();
+
+  // Theme values
+  const bg = useColorModeValue("white", "black");
+  const color = useColorModeValue("black", "white");
+  const cardBg = useColorModeValue("gray.50", "black");
+  const cardBorder = useColorModeValue("gray.200", "gray.700");
+  const modalBg = useColorModeValue("white", "gray.850");
+  const optionBg = useColorModeValue('#FFFFFF', '#1A202C');
+
   const roles = ['member', 'coordinator', 'leader', 'mentor'];
 
   const fetchGallery = async () => {
+    // Check cache first
+    if (galleryCache) {
+      setGallery(galleryCache);
+      return;
+    }
+
     try {
       const res = await axios.get(api + '/gallery');
       setGallery(res.data);
+      setGalleryCache(res.data);
     } catch (error) {
       toast({
         title: 'Error fetching gallery',
@@ -90,7 +112,15 @@ const GalleryPage = () => {
           isClosable: true,
         });
       }
-      fetchGallery();
+
+      // Invalidate gallery cache
+      clearCache('gallery');
+
+      // Refetch manually to update local state
+      const res = await axios.get(api + '/gallery');
+      setGallery(res.data);
+      setGalleryCache(res.data);
+
       onClose();
       resetForm();
     } catch (error) {
@@ -128,7 +158,14 @@ const GalleryPage = () => {
         duration: 3000,
         isClosable: true,
       });
-      fetchGallery();
+
+      // Invalidate gallery cache
+      clearCache('gallery');
+
+      // Refetch
+      const res = await axios.get(api + '/gallery');
+      setGallery(res.data);
+      setGalleryCache(res.data);
     } catch (error) {
       toast({
         title: 'Error deleting member',
@@ -156,12 +193,43 @@ const GalleryPage = () => {
     onClose();
   };
 
+  const handleBack = () => {
+    if (user) {
+      navigate(`/admin/${user._id}`);
+    } else {
+      navigate(-1);
+    }
+  };
+
   return (
-    <Box bg="black" minH="100vh" color="orange.300" p={4}>
+    <Box bg={bg} minH="100vh" color={color} p={4}>
+      {/* Top Header controls */}
+      <Flex justify="space-between" align="center" mb={6} borderBottom="2px" borderColor="orange.500" pb={4}>
+        <Button 
+          onClick={handleBack} 
+          leftIcon={<ArrowBackIcon />} 
+          variant="outline" 
+          colorScheme="orange"
+        >
+          Back
+        </Button>
+        <Heading size="xl" color="orange.400" textAlign="center">
+          Manage Gallery
+        </Heading>
+        <IconButton
+          icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
+          onClick={toggleColorMode}
+          aria-label="Toggle Theme"
+          variant="ghost"
+          color={color}
+          size="lg"
+        />
+      </Flex>
+
       <Button 
         onClick={onOpen} 
         colorScheme="orange" 
-        mb={4}
+        mb={6}
         leftIcon={<FaPlus />}
       >
         Add Member
@@ -172,11 +240,13 @@ const GalleryPage = () => {
           <Box 
             key={member._id} 
             p={4} 
-            bg="gray.900" 
+            bg={cardBg} 
+            borderColor={cardBorder}
+            borderWidth="1px"
             borderRadius="xl" 
             boxShadow="lg"
             transition="all 0.3s"
-            _hover={{ transform: 'translateY(-5px)', boxShadow: 'xl' }}
+            _hover={{ transform: 'translateY(-5px)', boxShadow: 'xl', borderColor: 'orange.400' }}
           >
             {member.photoBase64 && (
               <Image
@@ -212,7 +282,7 @@ const GalleryPage = () => {
 
       <Modal isOpen={isOpen} onClose={handleModalClose} isCentered size="xl">
         <ModalOverlay />
-        <ModalContent bg="gray.800" color="orange.300">
+        <ModalContent bg={modalBg} color={color}>
           <ModalHeader>{isEditing ? 'Edit Member' : 'Add New Member'}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
@@ -221,18 +291,21 @@ const GalleryPage = () => {
                 placeholder="Full Name" 
                 value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value })} 
+                bg={bg}
               />
               <Input 
                 placeholder="Registration Number" 
                 value={formData.regno}
                 onChange={e => setFormData({ ...formData, regno: e.target.value })} 
+                bg={bg}
               />
               <Select
                 value={formData.role}
                 onChange={e => setFormData({ ...formData, role: e.target.value })}
+                bg={bg}
               >
                 {roles.map(role => (
-                  <option key={role} value={role} style={{ background: '#1A202C', color: '#ED8936' }}>
+                  <option key={role} value={role} style={{ background: optionBg, color: '#ED8936' }}>
                     {role.charAt(0).toUpperCase() + role.slice(1)}
                   </option>
                 ))}
@@ -242,6 +315,7 @@ const GalleryPage = () => {
                 accept="image/*"
                 onChange={handleImageUpload}
                 pt={1}
+                bg={bg}
               />
               {formData.photoBase64 && (
                 <Image 

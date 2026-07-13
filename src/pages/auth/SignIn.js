@@ -8,8 +8,12 @@ import {
   Flex,
   Text,
   useToast,
-  Spinner
+  Spinner,
+  useColorMode,
+  useColorModeValue,
+  IconButton
 } from "@chakra-ui/react";
+import { SunIcon, MoonIcon, ArrowBackIcon } from "@chakra-ui/icons";
 import axios from 'axios';
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -24,6 +28,14 @@ const SignIn = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const { setUser } = useUser();
+  const { colorMode, toggleColorMode } = useColorMode();
+
+  const bg = useColorModeValue("white", "black");
+  const formBg = useColorModeValue("gray.50", "gray.900");
+  const formBorder = useColorModeValue("gray.200", "gray.700");
+  const color = useColorModeValue("black", "white");
+  const inputBg = useColorModeValue("white", "gray.800");
+  const inputBorder = useColorModeValue("gray.300", "gray.600");
 
   const handleSignin = async (e) => {
     e.preventDefault();
@@ -48,7 +60,7 @@ const SignIn = () => {
       });
 
       if (res.data.message === "Login successful" && res.data.user) {
-        const userData = res.data.user;
+        const userData = { ...res.data.user, isAdmin: false };
         setUser(userData);
         
         toast({
@@ -92,17 +104,45 @@ const SignIn = () => {
       minH="100vh"
       align="center"
       justify="center"
-      bg="black"
+      bg={bg}
+      color={color}
       px={{ base: 4, md: 0 }}
+      position="relative"
     >
+      {/* Back Button */}
+      <IconButton
+        icon={<ArrowBackIcon />}
+        onClick={() => navigate("/")}
+        aria-label="Back to Home"
+        position="absolute"
+        top={4}
+        left={4}
+        variant="ghost"
+        color={colorMode === 'light' ? 'black' : 'white'}
+        size="lg"
+      />
+
+      {/* Theme Toggle Icon at Top Right */}
+      <IconButton
+        icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
+        onClick={toggleColorMode}
+        aria-label="Toggle Theme"
+        position="absolute"
+        top={4}
+        right={4}
+        variant="ghost"
+        color={colorMode === 'light' ? 'black' : 'white'}
+        size="lg"
+      />
+
       <Box
         w="100%"
         maxW="md"
         p={8}
         borderWidth={1}
-        borderColor="gray.700"
+        borderColor={formBorder}
         borderRadius="xl"
-        bg="gray.900"
+        bg={formBg}
         boxShadow="xl"
       >
         <Heading 
@@ -117,16 +157,16 @@ const SignIn = () => {
 
         <form onSubmit={handleSignin}>
           <FormControl mb={6} isRequired>
-            <FormLabel color="white">Email address</FormLabel>
+            <FormLabel color={color}>Email address</FormLabel>
             <Input
               type="email"
               placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               size="lg"
-              bg="gray.800"
-              borderColor="gray.600"
-              color="white"
+              bg={inputBg}
+              borderColor={inputBorder}
+              color={color}
               _hover={{ borderColor: "gray.500" }}
               _focus={{
                 borderColor: "orange.400",
@@ -136,16 +176,16 @@ const SignIn = () => {
           </FormControl>
 
           <FormControl mb={8} isRequired>
-            <FormLabel color="white">Password</FormLabel>
+            <FormLabel color={color}>Password</FormLabel>
             <Input
               type="password"
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               size="lg"
-              bg="gray.800"
-              borderColor="gray.600"
-              color="white"
+              bg={inputBg}
+              borderColor={inputBorder}
+              color={color}
               _hover={{ borderColor: "gray.500" }}
               _focus={{
                 borderColor: "orange.400",

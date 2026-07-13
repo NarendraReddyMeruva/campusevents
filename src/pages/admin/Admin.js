@@ -3,9 +3,11 @@ import {
     Box, Button, Flex, Heading, VStack, Text, Avatar,
     Popover, PopoverTrigger, PopoverContent, PopoverBody,
     PopoverArrow, useDisclosure, Divider, Image, Stack,
-    useToast, Spinner, Container, HStack, Badge, Icon
+    useToast, Spinner, Container, HStack, Badge, Icon, IconButton,
+    useColorMode, useColorModeValue
 } from '@chakra-ui/react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { SunIcon, MoonIcon } from '@chakra-ui/icons';
 import { FaSignOutAlt, FaEdit } from 'react-icons/fa';
 import { FiCalendar, FiPhone, FiMail } from 'react-icons/fi';
 import { useUser } from '../../context/UserContext';
@@ -18,12 +20,24 @@ import axios from 'axios';
 const AdminDashboard = () => {
     const navigate = useNavigate();
     const { id } = useParams();
-    const { user, logout } = useUser();
+    const { user, adminProfileCache, setAdminProfileCache } = useUser();
     const { isOpen, onToggle, onClose } = useDisclosure();
     const [adminData, setAdminData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const toast = useToast();
+
+    const { colorMode, toggleColorMode } = useColorMode();
+
+    // Theme values
+    const bg = useColorModeValue("white", "black");
+    const color = useColorModeValue("black", "white");
+    const panelBg = useColorModeValue("gray.50", "black");
+    const panelBorder = useColorModeValue("gray.200", "orange.500");
+    const dividerColor = useColorModeValue("gray.300", "orange.550");
+    const navBg = useColorModeValue("orange.500", "orange.600");
+    const navText = useColorModeValue("black", "white");
+    const cardBg = useColorModeValue("gray.100", "black");
 
     useEffect(() => {
         const fetchAdminData = async () => {
@@ -36,8 +50,10 @@ const AdminDashboard = () => {
                 });
 
                 if (response.data.success) {
-                    setAdminData(response.data.data);
-                    localStorage.setItem(`adminData-${id}`, JSON.stringify(response.data.data));
+                    const data = response.data.data;
+                    setAdminData(data);
+                    setAdminProfileCache(prev => ({ ...prev, [id]: data }));
+                    localStorage.setItem(`adminData-${id}`, JSON.stringify(data));
                 } else {
                     throw new Error(response.data.message || 'Failed to load admin profile');
                 }
@@ -59,22 +75,30 @@ const AdminDashboard = () => {
             }
         };
 
-        const cachedAdminData = localStorage.getItem(`adminData-${id}`);
-        if (cachedAdminData) {
-            setAdminData(JSON.parse(cachedAdminData));
+        // Check context cache first
+        if (adminProfileCache && adminProfileCache[id]) {
+            setAdminData(adminProfileCache[id]);
             setLoading(false);
         } else {
-            if (id) {
-                fetchAdminData();
-            } else {
+            // Check localStorage
+            const cachedAdminData = localStorage.getItem(`adminData-${id}`);
+            if (cachedAdminData) {
+                const data = JSON.parse(cachedAdminData);
+                setAdminData(data);
+                setAdminProfileCache(prev => ({ ...prev, [id]: data }));
                 setLoading(false);
-                setError('No admin ID provided');
+            } else {
+                if (id) {
+                    fetchAdminData();
+                } else {
+                    setLoading(false);
+                    setError('No admin ID provided');
+                }
             }
         }
-    }, [id, toast]);
+    }, [id, toast, adminProfileCache, setAdminProfileCache]);
 
     const handleSignOut = () => {
-        
         navigate('/');
     };
 
@@ -86,7 +110,7 @@ const AdminDashboard = () => {
 
     if (loading) {
         return (
-            <Flex justify="center" align="center" minH="100vh" bg="black" direction="column" gap={4}>
+            <Flex justify="center" align="center" minH="100vh" bg={bg} direction="column" gap={4}>
                 <Spinner 
                     size="xl" 
                     color="orange.400" 
@@ -103,7 +127,7 @@ const AdminDashboard = () => {
 
     if (error) {
         return (
-            <Flex direction="column" justify="center" align="center" minH="100vh" bg="black" p={4} gap={6}>
+            <Flex direction="column" justify="center" align="center" minH="100vh" bg={bg} p={4} gap={6}>
                 <Box textAlign="center">
                     <Text color="orange.400" fontSize="2xl" fontWeight="bold" mb={2}>
                         Error loading admin profile
@@ -136,11 +160,11 @@ const AdminDashboard = () => {
     }
 
     return (
-        <Box minH="100vh" bg="black" color="white" display="flex" flexDirection="column">
+        <Box minH="100vh" bg={bg} color={color} display="flex" flexDirection="column">
             {/* Header */}
             <Flex
-                bg="orange.500"
-                color="black"
+                bg={navBg}
+                color={navText}
                 p={4}
                 align="center"
                 justify="space-between"
@@ -149,73 +173,83 @@ const AdminDashboard = () => {
                 top={0}
                 zIndex={10}
             >
-                <Heading size="lg" textAlign="center" flex="1" letterSpacing="wide">
+                <Heading size="lg" textAlign="center" flex="1" letterSpacing="wide" color={navText}>
                     Admin Dashboard
                 </Heading>
 
-                <Popover isOpen={isOpen} onClose={onClose}>
-                    <PopoverTrigger>
-                        <Avatar
-                            size="md"
-                            name={displayUser?.name || 'Admin'}
-                            cursor="pointer"
-                            onClick={onToggle}
-                            bg="black"
-                            color="orange.500"
-                            _hover={{
-                                boxShadow: '0 0 15px rgba(255, 140, 0, 0.9)',
-                                transform: 'scale(1.1)',
-                                transition: 'all 0.3s ease',
-                            }}
-                        />
-                    </PopoverTrigger>
-                    <PopoverContent bg="black" borderColor="orange.500" color="orange.400" borderWidth="2px">
-                        <PopoverArrow bg="black" borderColor="orange.500" />
-                        <PopoverBody p={4}>
-                            <VStack align="flex-start" spacing={3}>
-                                <HStack>
-                                    <Icon as={FiMail} color="orange.400" />
-                                    <Text>{displayUser?.email || "admin@example.com"}</Text>
-                                </HStack>
-                                <HStack>
-                                    <Icon as={FiPhone} color="orange.400" />
-                                    <Text>{displayUser?.phone || "Not provided"}</Text>
-                                </HStack>
-                                <HStack>
-                                    <Icon as={FiCalendar} color="orange.400" />
-                                    <Text>
-                                        {displayUser?.dob ? new Date(displayUser.dob).toLocaleDateString() : "Not provided"}
-                                    </Text>
-                                </HStack>
-                                <Divider borderColor="orange.500" />
-                                <Button
-                                    leftIcon={<FaEdit />}
-                                    colorScheme="orange"
-                                    variant="outline"
-                                    w="100%"
-                                    onClick={handleEditProfile}
-                                    size="md"
-                                >
-                                    Edit Profile
-                                </Button>
-                                <Button
-                                    leftIcon={<FaSignOutAlt />}
-                                    colorScheme="orange"
-                                    variant="outline"
-                                    w="100%"
-                                    onClick={handleSignOut}
-                                    size="md"
-                                    _hover={{
-                                        bg: 'orange.500',
-                                        color: 'black'
-                                    }}
-                                >
-                                    Sign Out
-                                </Button>
-                            </VStack>
-                        </PopoverBody>
-                    </PopoverContent>
-                </Popover>
+                <HStack spacing={4}>
+                    <IconButton
+                        icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
+                        onClick={toggleColorMode}
+                        aria-label="Toggle Theme"
+                        variant="ghost"
+                        color={navText}
+                    />
+
+                    <Popover isOpen={isOpen} onClose={onClose}>
+                        <PopoverTrigger>
+                            <Avatar
+                                size="md"
+                                name={displayUser?.name || 'Admin'}
+                                cursor="pointer"
+                                onClick={onToggle}
+                                bg="black"
+                                color="orange.500"
+                                _hover={{
+                                    boxShadow: '0 0 15px rgba(255, 140, 0, 0.9)',
+                                    transform: 'scale(1.1)',
+                                    transition: 'all 0.3s ease',
+                                }}
+                            />
+                        </PopoverTrigger>
+                        <PopoverContent bg="black" borderColor="orange.500" color="orange.400" borderWidth="2px">
+                            <PopoverArrow bg="black" borderColor="orange.500" />
+                            <PopoverBody p={4}>
+                                <VStack align="flex-start" spacing={3}>
+                                    <HStack>
+                                        <Icon as={FiMail} color="orange.400" />
+                                        <Text>{displayUser?.email || "admin@example.com"}</Text>
+                                    </HStack>
+                                    <HStack>
+                                        <Icon as={FiPhone} color="orange.400" />
+                                        <Text>{displayUser?.phone || "Not provided"}</Text>
+                                    </HStack>
+                                    <HStack>
+                                        <Icon as={FiCalendar} color="orange.400" />
+                                        <Text>
+                                            {displayUser?.dob ? new Date(displayUser.dob).toLocaleDateString() : "Not provided"}
+                                        </Text>
+                                    </HStack>
+                                    <Divider borderColor="orange.500" />
+                                    <Button
+                                        leftIcon={<FaEdit />}
+                                        colorScheme="orange"
+                                        variant="outline"
+                                        w="100%"
+                                        onClick={handleEditProfile}
+                                        size="md"
+                                    >
+                                        Edit Profile
+                                    </Button>
+                                    <Button
+                                        leftIcon={<FaSignOutAlt />}
+                                        colorScheme="orange"
+                                        variant="outline"
+                                        w="100%"
+                                        onClick={handleSignOut}
+                                        size="md"
+                                        _hover={{
+                                            bg: 'orange.500',
+                                            color: 'black'
+                                        }}
+                                    >
+                                        Sign Out
+                                    </Button>
+                                </VStack>
+                            </PopoverBody>
+                        </PopoverContent>
+                    </Popover>
+                </HStack>
             </Flex>
 
             {/* Main Content */}
@@ -283,7 +317,6 @@ const AdminDashboard = () => {
                                     textAlign="center"
                                     textTransform="uppercase"
                                     letterSpacing="wide"
-                                    _hover={{ color: 'black' }}
                                 >
                                     Events
                                 </Text>
@@ -291,7 +324,6 @@ const AdminDashboard = () => {
                                     fontSize="md"
                                     color="orange.200"
                                     textAlign="center"
-                                    _hover={{ color: 'black' }}
                                 >
                                     Manage all events
                                 </Text>
@@ -349,7 +381,6 @@ const AdminDashboard = () => {
                                     textAlign="center"
                                     textTransform="uppercase"
                                     letterSpacing="wide"
-                                    _hover={{ color: 'black' }}
                                 >
                                     Gallery
                                 </Text>
@@ -357,7 +388,6 @@ const AdminDashboard = () => {
                                     fontSize="md"
                                     color="orange.200"
                                     textAlign="center"
-                                    _hover={{ color: 'black' }}
                                 >
                                     Manage your gallery
                                 </Text>
@@ -415,7 +445,6 @@ const AdminDashboard = () => {
                                     textAlign="center"
                                     textTransform="uppercase"
                                     letterSpacing="wide"
-                                    _hover={{ color: 'black' }}
                                 >
                                     Ticket Verification
                                 </Text>
@@ -423,7 +452,6 @@ const AdminDashboard = () => {
                                     fontSize="md"
                                     color="orange.200"
                                     textAlign="center"
-                                    _hover={{ color: 'black' }}
                                 >
                                     know your validity
                                 </Text>
@@ -433,7 +461,7 @@ const AdminDashboard = () => {
                 </Flex>
 
                 {/* Admin Profile Section */}
-                <Box bg="gray.900" borderRadius="lg" p={6} boxShadow="dark-lg" mb={8}>
+                <Box bg={panelBg} borderColor={panelBorder} borderWidth="1px" borderRadius="lg" p={6} boxShadow="xl" mb={8}>
                     <Heading size="lg" mb={6} color="orange.400">
                         Admin Profile
                     </Heading>
@@ -446,7 +474,7 @@ const AdminDashboard = () => {
                                 color="black"
                                 fontWeight="bold"
                             />
-                            <Heading size="lg" color="orange.400">
+                            <Heading size="lg" color="orange.400" textAlign="center">
                                 {displayUser?.name || 'Admin'}
                             </Heading>
                             <Badge colorScheme="orange" px={3} py={1} borderRadius="full">
@@ -483,7 +511,7 @@ const AdminDashboard = () => {
                                 </Heading>
                                 <Box
                                     p={4}
-                                    bg="gray.800"
+                                    bg={cardBg}
                                     borderRadius="md"
                                     borderLeft="4px solid"
                                     borderColor="orange.400"
@@ -498,7 +526,7 @@ const AdminDashboard = () => {
 
             {/* Footer */}
             <Box
-                bg="gray.900"
+                bg={panelBg}
                 color="orange.400"
                 p={4}
                 textAlign="center"

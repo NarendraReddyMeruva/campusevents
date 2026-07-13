@@ -1,46 +1,102 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useNavigate } from 'react-router-dom';
 import {
     Box, Flex, Heading, Text, Button, Image,
     VStack, HStack, Container, Avatar, SimpleGrid,
     useDisclosure, IconButton, Slide, Divider,
-    AspectRatio, useInterval, Spinner
+    AspectRatio, useInterval, Spinner, useColorMode, useColorModeValue
 } from '@chakra-ui/react';
-import { HamburgerIcon, CloseIcon } from '@chakra-ui/icons';
+import { HamburgerIcon, CloseIcon, SunIcon, MoonIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 import logo from "../../assets/srkrlogo.jpeg"
 import { api } from "../../actions/api"
-
+import { useUser } from '../../context/UserContext';
 
 const HomePage = () => {
     const { isOpen, onToggle } = useDisclosure();
     const location = useLocation();
     const { id } = useParams();
+    const navigate = useNavigate();
     const [activeSlide, setActiveSlide] = useState(0);
     const [activeNavItem, setActiveNavItem] = useState('');
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [registeredEvents, setRegisteredEvents] = useState([]);
 
+    const { colorMode, toggleColorMode } = useColorMode();
+    const { 
+        user,
+        eventsCache, setEventsCache, 
+        registeredEventsCache, setRegisteredEventsCache 
+    } = useUser();
+
+    // Theme values
+    const bg = useColorModeValue("white", "black");
+    const color = useColorModeValue("black", "white");
+    const navBg = useColorModeValue("white", "gray.900");
+    const navColor = useColorModeValue("black", "white");
+    const menuButtonColor = useColorModeValue("black", "white");
+    const cardBg = useColorModeValue("gray.50", "black");
+    const cardBorder = useColorModeValue("gray.200", "whiteAlpha.205"); // subtle border for light, matches black for dark
+    const footerBg = useColorModeValue("gray.100", "gray.900");
+    const footerText = useColorModeValue("gray.600", "gray.500");
 
     useEffect(() => {
-        const fetchEvents = async () => {
-            try {
-                const eventsRes = await axios.get(`${api}/events`);
-                setEvents(eventsRes.data);
+        let isMounted = true;
 
+        const loadData = async () => {
+            try {
+                // 1. Load regular events
+                let currentEvents = eventsCache;
+                if (!currentEvents) {
+                    const eventsRes = await axios.get(`${api}/events`);
+                    currentEvents = eventsRes.data;
+                    if (isMounted) {
+                        setEventsCache(currentEvents);
+                    }
+                }
+                
+                if (isMounted && currentEvents) {
+                    // Filter duplicates to prevent double rendering
+                    const uniqueEvents = Array.from(new Map(currentEvents.map(e => [e._id, e])).values());
+                    setEvents(uniqueEvents);
+                }
+
+                // 2. Load registered events
                 if (id) {
-                    const regRes = await axios.get(`${api}/register/${id}`);
-                    setRegisteredEvents(regRes.data);
+                    let currentReg = registeredEventsCache[id];
+                    if (!currentReg) {
+                        const regRes = await axios.get(`${api}/register/${id}`);
+                        currentReg = regRes.data;
+                        if (isMounted) {
+                            setRegisteredEventsCache(prev => ({
+                                ...prev,
+                                [id]: regRes.data
+                            }));
+                        }
+                    }
+                    
+                    if (isMounted && currentReg) {
+                        // Filter duplicates by event._id to avoid repeating identical events
+                        const uniqueReg = Array.from(new Map(currentReg.map(r => [r.event?._id || r._id, r])).values());
+                        setRegisteredEvents(uniqueReg);
+                    }
                 }
             } catch (error) {
                 console.error('Error loading events:', error);
             } finally {
-                setLoading(false);
+                if (isMounted) {
+                    setLoading(false);
+                }
             }
         };
-        fetchEvents();
-    }, [id]);
+
+        loadData();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [id, eventsCache, registeredEventsCache, setEventsCache, setRegisteredEventsCache]);
 
     useEffect(() => {
         const path = location.pathname;
@@ -58,16 +114,16 @@ const HomePage = () => {
 
     if (loading) {
         return (
-            <Flex justify="center" align="center" minH="100vh">
-                <Spinner size="xl" />
+            <Flex justify="center" align="center" minH="100vh" bg={bg}>
+                <Spinner size="xl" color="orange.400" />
             </Flex>
         );
     }
 
     return (
-        <Box bg="black" color="white" minH="100vh" overflowX="hidden" overflowY="hidden">
-            {/* Navigation Bar - Keep exactly as is */}
-            <Box bg="white" position="sticky" top={0} zIndex={20} boxShadow="md">
+        <Box bg={bg} color={color} minH="100vh" overflowX="hidden">
+            {/* Navigation Bar */}
+            <Box bg={navBg} position="sticky" top={0} zIndex={20} boxShadow="md">
                 <Container maxW="container.xl">
                     <Flex h={16} alignItems="center" justifyContent="space-between">
                         <HStack spacing={4}>
@@ -75,137 +131,147 @@ const HomePage = () => {
                                 src={logo}
                                 alt="SRKR Logo"
                                 h="70px"
-                                fallbackSrc="https://via.placeholder.com/150x40/000000/FFFFFF?text=SRKR+CC"
                             />
                             <Text
                                 fontSize="xl"
                                 fontWeight="bold"
-                                color="black"
+                                color={navColor}
                                 whiteSpace="nowrap"
                             >
                                 SRKR CampusEvents
                             </Text>
                         </HStack>
 
-                        {/* Desktop Nav */}
-                        <HStack as="nav" spacing={8} display={{ base: "none", md: "flex" }}>
-                            <Link to={`/events/${id}`}>
-                                <Button
-                                    variant="ghost"
-                                    color="black"
-                                    position="relative"
-                                    fontSize="xl"
-                                    fontWeight="bold"
-                                    _after={{
-                                        content: '""',
-                                        position: 'absolute',
-                                        bottom: '0',
-                                        left: '0',
-                                        right: '0',
-                                        height: '2px',
-                                        bg: activeNavItem === 'events' ? 'orange.400' : 'transparent',
-                                        transform: activeNavItem === 'events' ? 'scaleX(1)' : 'scaleX(0)',
-                                        transition: 'transform 0.3s ease, background 0.3s ease'
-                                    }}
-                                    _hover={{
-                                        _after: {
-                                            bg: 'orange.400',
-                                            transform: 'scaleX(1)'
-                                        }
-                                    }}
-                                >
-                                    Events
-                                </Button>
-                            </Link>
+                        <HStack spacing={4}>
+                            {/* Theme Toggle Button - desktop only */}
+                            <IconButton
+                                display={{ base: "none", md: "inline-flex" }}
+                                icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
+                                onClick={toggleColorMode}
+                                aria-label="Toggle Theme"
+                                variant="ghost"
+                                color={menuButtonColor}
+                            />
 
-                            <Link to={`/gallery`}>
-                                <Button
-                                    variant="ghost"
-                                    color="black"
-                                    position="relative"
-                                    fontSize="xl"
-                                    fontWeight="bold"
-                                    _after={{
-                                        content: '""',
-                                        position: 'absolute',
-                                        bottom: '0',
-                                        left: '0',
-                                        right: '0',
-                                        height: '2px',
-                                        bg: activeNavItem === 'gallery' ? 'orange.400' : 'transparent',
-                                        transform: activeNavItem === 'gallery' ? 'scaleX(1)' : 'scaleX(0)',
-                                        transition: 'transform 0.3s ease, background 0.3s ease'
-                                    }}
-                                    _hover={{
-                                        _after: {
-                                            bg: 'orange.400',
-                                            transform: 'scaleX(1)'
-                                        }
-                                    }}
-                                >
-                                    Gallery
-                                </Button>
-                            </Link>
+                            {/* Desktop Nav */}
+                            <HStack as="nav" spacing={8} display={{ base: "none", md: "flex" }}>
+                                <Link to={`/events/${id}`}>
+                                    <Button
+                                        variant="ghost"
+                                        color={navColor}
+                                        position="relative"
+                                        fontSize="xl"
+                                        fontWeight="bold"
+                                        _after={{
+                                            content: '""',
+                                            position: 'absolute',
+                                            bottom: '0',
+                                            left: '0',
+                                            right: '0',
+                                            height: '2px',
+                                            bg: activeNavItem === 'events' ? 'orange.400' : 'transparent',
+                                            transform: activeNavItem === 'events' ? 'scaleX(1)' : 'scaleX(0)',
+                                            transition: 'transform 0.3s ease, background 0.3s ease'
+                                        }}
+                                        _hover={{
+                                            _after: {
+                                                bg: 'orange.400',
+                                                transform: 'scaleX(1)'
+                                            }
+                                        }}
+                                    >
+                                        Events
+                                    </Button>
+                                </Link>
 
-                            <Link to={`/about`}>
-                                <Button
-                                    variant="ghost"
-                                    color="black"
-                                    position="relative"
-                                    fontSize="xl"
-                                    fontWeight="bold"
-                                    _after={{
-                                        content: '""',
-                                        position: 'absolute',
-                                        bottom: '0',
-                                        left: '0',
-                                        right: '0',
-                                        height: '2px',
-                                        bg: activeNavItem === 'about' ? 'orange.400' : 'transparent',
-                                        transform: activeNavItem === 'about' ? 'scaleX(1)' : 'scaleX(0)',
-                                        transition: 'transform 0.3s ease, background 0.3s ease'
-                                    }}
-                                    _hover={{
-                                        _after: {
-                                            bg: 'orange.400',
-                                            transform: 'scaleX(1)'
-                                        }
-                                    }}
-                                >
-                                    About
-                                </Button>
-                            </Link>
+                                <Link to={`/gallery`}>
+                                    <Button
+                                        variant="ghost"
+                                        color={navColor}
+                                        position="relative"
+                                        fontSize="xl"
+                                        fontWeight="bold"
+                                        _after={{
+                                            content: '""',
+                                            position: 'absolute',
+                                            bottom: '0',
+                                            left: '0',
+                                            right: '0',
+                                            height: '2px',
+                                            bg: activeNavItem === 'gallery' ? 'orange.400' : 'transparent',
+                                            transform: activeNavItem === 'gallery' ? 'scaleX(1)' : 'scaleX(0)',
+                                            transition: 'transform 0.3s ease, background 0.3s ease'
+                                        }}
+                                        _hover={{
+                                            _after: {
+                                                bg: 'orange.400',
+                                                transform: 'scaleX(1)'
+                                            }
+                                        }}
+                                    >
+                                        Gallery
+                                    </Button>
+                                </Link>
 
-                            <Link to={`/profile/${id}`}>
-                                <Avatar
-                                    size="md"
-                                    name="Profile"
-                                    src=" "
-                                    _hover={{
-                                        boxShadow: '0 0 10px rgba(255, 140, 0, 0.7)',
-                                        transform: 'scale(1.1)',
-                                        transition: 'all 0.3s ease'
-                                    }}
-                                />
-                            </Link>
+                                <Link to={`/about`}>
+                                    <Button
+                                        variant="ghost"
+                                        color={navColor}
+                                        position="relative"
+                                        fontSize="xl"
+                                        fontWeight="bold"
+                                        _after={{
+                                            content: '""',
+                                            position: 'absolute',
+                                            bottom: '0',
+                                            left: '0',
+                                            right: '0',
+                                            height: '2px',
+                                            bg: activeNavItem === 'about' ? 'orange.400' : 'transparent',
+                                            transform: activeNavItem === 'about' ? 'scaleX(1)' : 'scaleX(0)',
+                                            transition: 'transform 0.3s ease, background 0.3s ease'
+                                        }}
+                                        _hover={{
+                                            _after: {
+                                                bg: 'orange.400',
+                                                transform: 'scaleX(1)'
+                                            }
+                                        }}
+                                    >
+                                        About
+                                    </Button>
+                                </Link>
+
+                                <Link to={`/profile/${id}`}>
+                                    <Avatar
+                                        size="md"
+                                        name="Profile"
+                                        src=" "
+                                        _hover={{
+                                            boxShadow: '0 0 10px rgba(255, 140, 0, 0.7)',
+                                            transform: 'scale(1.1)',
+                                            transition: 'all 0.3s ease'
+                                        }}
+                                    />
+                                </Link>
+                            </HStack>
+
+                            {/* Mobile Nav Toggle */}
+                            <IconButton
+                                display={{ base: "flex", md: "none" }}
+                                onClick={onToggle}
+                                icon={isOpen ? <CloseIcon /> : <HamburgerIcon />}
+                                variant="outline"
+                                aria-label="Toggle Navigation"
+                                color={menuButtonColor}
+                            />
                         </HStack>
-
-                        {/* Mobile Nav Toggle */}
-                        <IconButton
-                            display={{ base: "flex", md: "none" }}
-                            onClick={onToggle}
-                            icon={isOpen ? <CloseIcon /> : <HamburgerIcon />}
-                            variant="outline"
-                            aria-label="Toggle Navigation"
-                            color="black"
-                        />
                     </Flex>
                 </Container>
             </Box>
 
-            {/* Mobile Nav - Keep exactly as is */}
             <Slide direction="right" in={isOpen} style={{ zIndex: 30 }}>
-                <Box bg="white" p={4} color="black" shadow="lg" w="full">
+                <Box bg={navBg} p={4} color={color} shadow="lg" w="full">
                     <VStack align="stretch" spacing={4}>
                         <Link to={`/events/${id}`} onClick={onToggle}>
                             <Button
@@ -214,6 +280,7 @@ const HomePage = () => {
                                 justifyContent="flex-start"
                                 fontSize="xl"
                                 fontWeight="bold"
+                                color={navColor}
                             >
                                 Events
                             </Button>
@@ -226,6 +293,7 @@ const HomePage = () => {
                                 justifyContent="flex-start"
                                 fontSize="xl"
                                 fontWeight="bold"
+                                color={navColor}
                             >
                                 Gallery
                             </Button>
@@ -238,6 +306,7 @@ const HomePage = () => {
                                 justifyContent="flex-start"
                                 fontSize="xl"
                                 fontWeight="bold"
+                                color={navColor}
                             >
                                 About
                             </Button>
@@ -250,11 +319,29 @@ const HomePage = () => {
                                 justifyContent="flex-start"
                                 fontSize="xl"
                                 fontWeight="bold"
+                                color={navColor}
                                 pl={2}
                             >
                                 Profile
                             </Button>
                         </Link>
+
+                        {/* Theme Toggle in sandwich menu */}
+                        <Button
+                            leftIcon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
+                            onClick={() => {
+                                toggleColorMode();
+                                onToggle();
+                            }}
+                            variant="ghost"
+                            w="full"
+                            justifyContent="flex-start"
+                            fontSize="xl"
+                            fontWeight="bold"
+                            color={navColor}
+                        >
+                            {colorMode === 'light' ? 'Dark Mode' : 'Light Mode'}
+                        </Button>
                     </VStack>
                 </Box>
             </Slide>
@@ -299,6 +386,12 @@ const HomePage = () => {
                                             {event.description}
                                         </Text>
                                         <Button
+                                            onClick={(e) => {
+                                                if (!user) {
+                                                    e.preventDefault();
+                                                    navigate('/signup');
+                                                }
+                                            }}
                                             as={Link}
                                             to={`/register/${id}/${event._id}`}
                                             colorScheme="orange"
@@ -340,7 +433,7 @@ const HomePage = () => {
                 </HStack>
             </Box>
 
-            {/* Rest of your existing content - Keep exactly as is */}
+            {/* Content */}
             <Container maxW="container.xl" px={{ base: 4, md: 8 }} py={8}>
                 {/* Club Story Section */}
                 <Box mb={16}>
@@ -371,20 +464,42 @@ const HomePage = () => {
                     </SimpleGrid>
                 </Box>
 
-                {/* Registered Events Section (only if user is logged in) */}
+                {/* Registered Events Section */}
                 {id && registeredEvents.length > 0 && (
                     <Box mb={16}>
                         <Heading as="h2" size="xl" mb={8} color="teal.400">
                             Your Registered Programs
                         </Heading>
 
-                        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={8}>
+                        <Flex
+                            overflowX="auto"
+                            gap={8}
+                            pb={4}
+                            scrollSnapType="x mandatory"
+                            sx={{
+                                '&::-webkit-scrollbar': {
+                                    height: '6px',
+                                },
+                                '&::-webkit-scrollbar-track': {
+                                    background: 'transparent',
+                                },
+                                '&::-webkit-scrollbar-thumb': {
+                                    background: 'orange.400',
+                                    borderRadius: '10px',
+                                },
+                            }}
+                        >
                             {registeredEvents.map((event) => (
                                 <Box
                                     key={event._id}
+                                    minW={{ base: "280px", md: "350px" }}
+                                    maxW={{ base: "280px", md: "350px" }}
+                                    flex="0 0 auto"
+                                    scrollSnapAlign="start"
                                     borderWidth="1px"
                                     borderRadius="lg"
-                                    borderColor="whiteAlpha.200"
+                                    borderColor={cardBorder}
+                                    bg={cardBg}
                                     overflow="hidden"
                                     _hover={{
                                         borderColor: "orange.400",
@@ -395,21 +510,21 @@ const HomePage = () => {
                                     <Image
                                         src={`${event.event.photoBase64}`}
                                         alt={event.event.name}
-                                        h="250px"
+                                        h="200px"
                                         w="full"
                                         objectFit="cover"
                                     />
                                     <Box p={6}>
-                                        <Heading as="h3" size="lg" mb={2} color="orange.400">
+                                        <Heading as="h3" size="lg" mb={2} color="orange.400" isTruncated>
                                             {event.event.name}
                                         </Heading>
                                         <Text color="gray.400" mb={2}>{new Date(event.event.date).toLocaleDateString()}</Text>
-                                        <Text mb={4}>{event.event.description}</Text>
-                                        <Text fontWeight="bold">Registration ID: {event._id}</Text>
+                                        <Text mb={4} noOfLines={3}>{event.event.description}</Text>
+                                        <Text fontWeight="bold" fontSize="sm" color="orange.300">Registration ID: {event._id}</Text>
                                     </Box>
                                 </Box>
                             ))}
-                        </SimpleGrid>
+                        </Flex>
                     </Box>
                 )}
 
@@ -425,7 +540,8 @@ const HomePage = () => {
                                 key={event._id}
                                 borderWidth="1px"
                                 borderRadius="lg"
-                                borderColor="whiteAlpha.200"
+                                borderColor={cardBorder}
+                                bg={cardBg}
                                 overflow="hidden"
                                 _hover={{
                                     borderColor: "orange.400",
@@ -447,6 +563,12 @@ const HomePage = () => {
                                     <Text color="gray.400" mb={2}>{new Date(event.date).toLocaleDateString()}</Text>
                                     <Text mb={4}>{event.description}</Text>
                                     <Button
+                                        onClick={(e) => {
+                                            if (!user) {
+                                                e.preventDefault();
+                                                navigate('/signup');
+                                            }
+                                        }}
                                         as={Link}
                                         to={`/register/${id}/${event._id}`}
                                         colorScheme="orange"
@@ -476,8 +598,8 @@ const HomePage = () => {
                 </Box>
             </Container>
 
-            {/* Footer - Keep exactly as is */}
-            <Box bg="gray.900" py={8}>
+            {/* Footer */}
+            <Box bg={footerBg} color={footerText} py={8}>
                 <Container maxW="container.xl">
                     <Flex direction={{ base: "column", md: "row" }} justify="space-between" align="center">
                         <Image
@@ -485,13 +607,12 @@ const HomePage = () => {
                             alt="SRKR Coding Club Logo"
                             h="100px"
                             mb={{ base: 4, md: 0 }}
-                            fallbackSrc="https://via.placeholder.com/150x30/000000/FFFFFF?text=SRKR+CC"
                         />
                         <HStack spacing={6}>
-                            <Link to={`/about/${id}`}>About</Link>
+                            <Link to={`/about`}>About</Link>
                             <Link to={`/events/${id}`}>Events</Link>
-                            <Link to={`/gallery/${id}`}>Gallery</Link>
-                            <Link to={`/contact/${id}`}>Contact</Link>
+                            <Link to={`/gallery`}>Gallery</Link>
+                            <Link to={`/about`}>Contact</Link>
                         </HStack>
                     </Flex>
                     <Divider my={4} borderColor="whiteAlpha.200" />
